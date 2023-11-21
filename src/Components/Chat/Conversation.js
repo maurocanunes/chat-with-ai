@@ -8,9 +8,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 
 
 const Conversation = () => {
-    const { API_KEY } = process.env;
-    alert(API_KEY);
-    const openai = new OpenAI({apiKey: API_KEY});
+    const openai = new OpenAI({apiKey: process.env.REACT_APP_API_KEY});
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [conversation, setConversation] = useState([]);
