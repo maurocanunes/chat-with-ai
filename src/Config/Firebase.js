@@ -20,12 +20,12 @@ const auth = getAuth(app);
 auth.useDeviceLanguage();
 const googleProvider = new GoogleAuthProvider();
 const db = getFirestore(app);
-const messagesCollectionRef = collection(db, 'chat')
+const apiKeyCollectionRef = collection(db, 'chat')
 
 
 export {
   auth,
   googleProvider,
   db,
-  messagesCollectionRef
+  apiKeyCollectionRef
 }

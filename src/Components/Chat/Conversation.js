@@ -5,10 +5,11 @@ import LoadingSpinner from '../Screen/LoadingSpinner';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
+import { doc, getDoc } from "firebase/firestore";
+import { db, apiKeyCollectionRef } from '../../Config/Firebase';
 
 
 const Conversation = () => {
-    const openai = new OpenAI({apiKey: process.env.API_KEY, dangerouslyAllowBrowser: true});
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [conversation, setConversation] = useState([]);
@@ -17,19 +18,20 @@ const Conversation = () => {
     utterance.lang = "pt-BR";
     /**
      * TODO: implement commands using the commands list in ././Config/Commands.js
-     */
-    const {
-        error,
-        interimResult,
-        isRecording,
-        results,
-        setResults,
-        startSpeechToText,
-        stopSpeechToText,
-      } = useSpeechToText({
+    */
+   const {
+       error,
+       interimResult,
+       isRecording,
+       results,
+       setResults,
+       startSpeechToText,
+       stopSpeechToText,
+    } = useSpeechToText({
         continuous: true,
         useLegacyResults: false
     });
+
     useEffect(() => {
 
         const typingTimeout = setTimeout(() => {
@@ -37,28 +39,41 @@ const Conversation = () => {
           }, 4000);
           
           const chat = async () => {
+            stopSpeechToText();
             try {
-                const completion = await openai.chat.completions.create({
-                messages: conversation,
-                model: "gpt-3.5-turbo",
-                
-                });
-                const content = completion.choices[0]?.message?.content
-                if (content) {
-                    const updatedMessages = [...conversation, completion.choices[0].message];
-                    utterance.text = content;
-                    handlePlay();
-                    setConversation(updatedMessages);
-                    setNewMessage('');
-                    setIsTyping(false);
+
+                const docRef = doc(db, 'api_key', 'gpt');
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const key = docSnap.data().key;
+                    // console.log(key)
+                    const openai = new OpenAI({apiKey: key, dangerouslyAllowBrowser: true});
+                    // return key
+                    const completion = await openai.chat.completions.create({
+                    messages: conversation,
+                    model: "gpt-3.5-turbo",
+                    
+                    });
+                    const content = completion.choices[0]?.message?.content
+                    if (content) {
+                        const updatedMessages = [...conversation, completion.choices[0].message];
+                        utterance.text = content;
+                        handlePlay();
+                        setConversation(updatedMessages);
+                        setNewMessage('');
+                        setIsTyping(false);
+                    }
+                } else {
+                    console.log("No such document!");
                 }
+
             } catch(err) {
                 console.log(err)
             }
         }
 
         if (conversation.length > 0 && conversation[conversation.length-2]?.role !== 'user') {
-            console.log(conversation)
             setIsTyping(true)
             chat();
         }
@@ -82,7 +97,6 @@ const Conversation = () => {
 
 
     const handlePlay = () => {
-        stopSpeechToText();
         const synth = window.speechSynthesis;
         synth.cancel();
 
