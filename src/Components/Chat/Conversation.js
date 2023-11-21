@@ -9,11 +9,13 @@ import InputGroup from 'react-bootstrap/InputGroup';
 
 const Conversation = () => {
 
-    const openai = new OpenAI({apiKey: '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', dangerouslyAllowBrowser: true});
+    const openai = new OpenAI({apiKey: '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', dangerouslyAllowBrowser: true});
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [conversation, setConversation] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
+    const utterance = new SpeechSynthesisUtterance()
+    utterance.lang = "pt-BR";
     /**
      * TODO: implement commands using the commands list in ././Config/Commands.js
      */
@@ -29,12 +31,13 @@ const Conversation = () => {
         continuous: true,
         useLegacyResults: false
     });
-    
     useEffect(() => {
+
         const typingTimeout = setTimeout(() => {
             setIsTyping(false);
-          }, 3000);
-        const chat = async () => {
+          }, 4000);
+          
+          const chat = async () => {
             try {
                 const completion = await openai.chat.completions.create({
                 messages: conversation,
@@ -44,14 +47,17 @@ const Conversation = () => {
                 const content = completion.choices[0]?.message?.content
                 if (content) {
                     const updatedMessages = [...conversation, completion.choices[0].message];
+                    utterance.text = content;
+                    handlePlay();
                     setConversation(updatedMessages);
                     setNewMessage('');
+                    setIsTyping(false);
                 }
             } catch(err) {
                 console.log(err)
             }
         }
-        
+
         if (conversation.length > 0 && conversation[conversation.length-2]?.role !== 'user') {
             console.log(conversation)
             setIsTyping(true)
@@ -67,8 +73,6 @@ const Conversation = () => {
         }
         if (isRecording) {
             setIsTyping(true)
-        } else {
-            // startSpeechToText()
         }
         return () => {
             clearTimeout(typingTimeout);
@@ -77,10 +81,21 @@ const Conversation = () => {
 
     if (error) return <p>Web Speech API is not available in this browser 🤷‍</p>;
 
-    // const handleTyping = (e) => {
-    //     setNewMessage(e.target.value);
-    //     setIsTyping(e.target.value !== '');
-    // };
+
+    const handlePlay = () => {
+        stopSpeechToText();
+        const synth = window.speechSynthesis;
+        synth.cancel();
+
+        synth.speak(utterance);
+    };
+
+    utterance.addEventListener('end', (event) => {
+
+        startSpeechToText();
+    })
+
+    
 
     const handleSendMessage = (voiceMessage='') => {
         setIsTyping(false);
@@ -92,18 +107,6 @@ const Conversation = () => {
         setMessages({ content: voiceMessage !== '' ? voiceMessage : newMessage, role: 'user' });
         setNewMessage('');
     };
-  
-    // const record = () => {
-    //     if (isRecording) {
-    //         stopSpeechToText()
-    //         handleSendMessage() 
-    //         setIsTyping(false)
-    //     } 
-    //     else {
-    //         startSpeechToText()
-    //         setIsTyping(true)
-    //     }
-    // }
 
     return (
     <>
@@ -116,20 +119,9 @@ const Conversation = () => {
                     </p>
                 </div>
                 ))}
-            {isTyping && <div> <LoadingSpinner /> </div>}
-            {/* <InputGroup className="mb-3 position-absolute bottom-0">
-                <Form.Control
-                placeholder="Recipient's username"
-                aria-label="Recipient's username"
-                aria-describedby="basic-addon2"
-                value={newMessage}
-                onChange={handleTyping}
-                />
-                <Button variant="success" id="button-addon2" type="submit" className='br-pill' onClick={() => handleSendMessage()}>
-                Enviar
-                </Button>
-            </InputGroup> */}
-                <Button variant="outline-secondary" className='br-pill' onClick={isRecording ? stopSpeechToText : startSpeechToText}>{isRecording ? 'Parar' : 'Gravar'}</Button>
+            {isTyping && <div> <LoadingSpinner /> </div>}   
+            <Button variant="success" className='br-pill' onClick={isRecording ? stopSpeechToText : startSpeechToText}>{isRecording ? 'Parar' : 'Gravar'}</Button>
+
                 
         </div>
     </>
